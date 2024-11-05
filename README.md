@@ -29,7 +29,7 @@
 
 1. 레포지토리를 클론합니다:
     ```bash
-    git clone https://github.com/yourusername/lol-data-collector.git
+    git clone [https://github.com/yourusername/lol-data-collector](https://github.com/minsminsKR/LOLdata).git
     cd lol-data-collector
     ```
 2. 필요한 패키지를 설치합니다:
