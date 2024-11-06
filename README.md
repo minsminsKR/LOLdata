@@ -30,7 +30,7 @@
 1. 레포지토리를 클론합니다:
     ```bash
     git clone https://github.com/minsminsKR/LOLdata.git
-    cd lol-data-collector
+    cd LOLdata
     ```
 2. 필요한 패키지를 설치합니다:
     ```bash
