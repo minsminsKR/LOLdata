@@ -3,7 +3,9 @@ import requests
 import time
 import random
 import json
+import pandas as pd
 from typing import List, Dict
+from io import BytesIO
 
 class LOLDataCollector:
     def __init__(self, api_key: str):
@@ -135,14 +137,43 @@ class LOLDataCollector:
         except Exception as e:
             st.error(f"Error extracting match data: {str(e)}")
             return None
-def save_as_json(data: List[Dict], filename: str):
-    """데이터를 JSON 파일로 저장합니다."""
-    try:
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-        st.success(f"Your data has been successfully saved to {filename}.")
-    except Exception as e:
-        st.error(f"Error saving data: {str(e)}")
+
+def save_as_json(data: List[Dict]) -> BytesIO:
+    """데이터를 JSON 형식의 BytesIO 객체로 변환합니다."""
+    json_string = json.dumps(data, ensure_ascii=False, indent=4)
+    return BytesIO(json_string.encode())
+
+def convert_to_excel(data: List[Dict]) -> BytesIO:
+    """데이터를 Excel 형식의 BytesIO 객체로 변환합니다."""
+    # 데이터 구조 평탄화
+    flattened_data = []
+    for match in data:
+        base_info = {
+            "match_id": match["match_id"],
+            "game_duration": match["game_duration"],
+            "game_version": match["game_version"],
+            "tier": match["tier"],
+            "blue_team_kills": match["blue_team"]["kills"],
+            "blue_team_deaths": match["blue_team"]["deaths"],
+            "blue_team_assists": match["blue_team"]["assists"],
+            "blue_team_win": match["blue_team_win"],
+            "red_team_kills": match["red_team"]["kills"],
+            "red_team_deaths": match["red_team"]["deaths"],
+            "red_team_assists": match["red_team"]["assists"]
+        }
+        
+        # 각 플레이어 데이터를 개별 행으로 변환
+        for player in match["players"]:
+            player_data = base_info.copy()
+            player_data.update(player)
+            flattened_data.append(player_data)
+    
+    df = pd.DataFrame(flattened_data)
+    excel_buffer = BytesIO()
+    df.to_excel(excel_buffer, index=False)
+    excel_buffer.seek(0)
+    return excel_buffer
+
 def collect_tier_data(collector: LOLDataCollector, tier: str, num_matches: int, 
                      selection_method: str, selected_features: List[str]) -> List[Dict]:
     """특정 티어의 데이터를 수집합니다."""
@@ -154,7 +185,6 @@ def collect_tier_data(collector: LOLDataCollector, tier: str, num_matches: int,
     if not summoners:
         st.error(f"{tier} Failed to get tier summoner list.")
         return []
-
 
     # 소환사 선택 방법에 따라 처리
     if selection_method == "랜덤":
@@ -210,6 +240,9 @@ def main():
 
     collector = LOLDataCollector(api_key)
 
+    # 다운로드 버튼을 표시할 컨테이너 생성
+    download_container = st.container()
+
     # 사이드바에 설정 옵션 추가
     st.sidebar.header("Data Collection Settings")
     
@@ -260,9 +293,30 @@ def main():
                 progress_bar.progress((i + 1) / len(selected_tiers))
 
             if all_match_data:
-                # JSON 파일로 저장
-                save_as_json(all_match_data, "lol_matches_data.json")
-                st.success("The data was saved as a JSON file.")
+                st.success("Data collection completed!")
+                
+                # 다운로드 버튼들을 미리 만들어둔 컨테이너에 표시
+                with download_container:
+                    st.subheader("Download Collected Data")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        json_buffer = save_as_json(all_match_data)
+                        st.download_button(
+                            label="Download JSON",
+                            data=json_buffer,
+                            file_name="lol_matches_data.json",
+                            mime="application/json"
+                        )
+                    
+                    with col2:
+                        excel_buffer = convert_to_excel(all_match_data)
+                        st.download_button(
+                            label="Download Excel",
+                            data=excel_buffer,
+                            file_name="lol_matches_data.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
                 
                 st.subheader("Collected data statistics")
                 st.write(f"Total number of matches collected: {len(all_match_data)}")
