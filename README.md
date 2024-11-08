@@ -2,7 +2,8 @@
 
 ---
 
-# 🏆 리그 오브 레전드 데이터 수집기 🏆
+# 🏆 리그 오브 레전드 데이터 수집기 🏆 
+https://league-of-legends-data-collector.streamlit.app/
 
 리그 오브 레전드의 랭크 매치 데이터를 쉽고 빠르게 수집하고 분석하세요!
 
